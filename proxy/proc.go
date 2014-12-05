@@ -2,6 +2,8 @@ package proxy
 
 import "sync"
 
+const MaxOfMaxProc = 64
+
 type proc struct {
 	start   chan struct{}
 	quit    chan struct{}
@@ -9,15 +11,19 @@ type proc struct {
 	mtx     sync.Mutex
 }
 
-func newProc() *proc {
-	return &proc{
-		start: make(chan struct{}),
-		quit:  make(chan struct{}),
+func newProc(maxProc int) *proc {
+	p := &proc{
+		start: make(chan struct{}, MaxOfMaxProc),
+		quit:  make(chan struct{}, MaxOfMaxProc),
 	}
+	p.SetMaxProc(maxProc)
+	return p
 }
 
 func (p *proc) SetMaxProc(maxProc int) {
-	if maxProc < 0 {
+	if maxProc > MaxOfMaxProc {
+		maxProc = MaxOfMaxProc
+	} else if maxProc < 0 {
 		maxProc = 0
 	}
 

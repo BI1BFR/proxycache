@@ -12,9 +12,8 @@ type Loader struct {
 func NewLoader(p ProxyLoader, maxProc int) *Loader {
 	l := &Loader{
 		p:    p,
-		proc: newProc(),
+		proc: newProc(maxProc),
 	}
-	l.SetMaxProc(maxProc)
 
 	go func() {
 		for {
@@ -26,9 +25,9 @@ func NewLoader(p ProxyLoader, maxProc int) *Loader {
 	return l
 }
 
-func (l *Loader) Load(key string) (value []byte, ok bool) {
+func (l *Loader) Load(key string) ([]byte, bool) {
 	<-l.start
-	value, ok = l.p.Load(key)
-	l.start <- struct{}{}
-	return
+	defer func() { l.start <- struct{}{} }()
+
+	return l.p.Load(key)
 }

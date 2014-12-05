@@ -16,10 +16,8 @@ func NewSaver(p ProxySaver, maxProc int, ch <-chan *volume.Entry) *Saver {
 	s := &Saver{
 		p:       p,
 		entries: ch,
-		proc:    newProc(),
+		proc:    newProc(maxProc),
 	}
-
-	s.SetMaxProc(maxProc)
 
 	go func() {
 		for {
