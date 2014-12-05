@@ -25,14 +25,14 @@ func New(proxy Proxy, maxEntry int) *ProxyCache {
 }
 
 func (p *ProxyCache) Get(key string) []byte {
-	if volume := p.volume.Get(key); volume != nil {
-		return volume
+	if value := p.volume.Get(key); value != nil {
+		return value
 	}
 
-	volume, ok := p.proxy.Load(key)
+	value, ok := p.proxy.Load(key)
 	if ok {
-		p.volume.OnLoad(key, volume)
-		return volume
+		p.volume.OnLoad(key, value)
+		return value
 	}
 
 	return nil
