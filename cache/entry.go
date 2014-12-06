@@ -1,4 +1,4 @@
-package volume
+package cache
 
 type Entry struct {
 	Key   string

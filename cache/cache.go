@@ -1,4 +1,4 @@
-package volume
+package cache
 
 import (
 	"sync"
@@ -41,7 +41,7 @@ func (c *Cache) Get(key string) *Entry {
 	}
 }
 
-func (c *Cache) Set(entry *Entry) {
+func (c *Cache) Put(entry *Entry) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -51,7 +51,7 @@ func (c *Cache) Set(entry *Entry) {
 }
 
 func (c *Cache) OnLoad(key string, value []byte) {
-	c.Set(&Entry{key, value})
+	c.Put(&Entry{key, value})
 }
 
 func (c *Cache) Len() int {

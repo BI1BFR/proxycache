@@ -1,4 +1,4 @@
-package volume
+package cache
 
 import (
 	"sync"
@@ -12,17 +12,17 @@ type Buffer struct {
 	q       *pq.PriorityQueue
 	mtx     sync.Mutex
 
-	saveChan chan *Entry
-	saveCond *sync.Cond
+	ch   chan *Entry
+	cond *sync.Cond
 }
 
 func NewBuffer() *Buffer {
 	b := &Buffer{
-		entries:  make(map[string]*Entry),
-		q:        pq.New(),
-		saveChan: make(chan *Entry),
+		entries: make(map[string]*Entry),
+		q:       pq.New(),
+		ch:      make(chan *Entry),
 	}
-	b.saveCond = sync.NewCond(&b.mtx)
+	b.cond = sync.NewCond(&b.mtx)
 
 	go func() {
 		for {
@@ -31,13 +31,13 @@ func NewBuffer() *Buffer {
 				defer b.mtx.Unlock()
 
 				for b.q.Len() == 0 {
-					b.saveCond.Wait()
+					b.cond.Wait()
 				}
 
 				return b.entries[b.q.Pop().(string)]
 
 			}(); entry != nil {
-				b.saveChan <- entry
+				b.ch <- entry
 			}
 		}
 	}()
@@ -46,7 +46,7 @@ func NewBuffer() *Buffer {
 }
 
 func (b *Buffer) SaveChan() <-chan *Entry {
-	return b.saveChan
+	return b.ch
 }
 
 func (b *Buffer) Get(key string) *Entry {
@@ -57,7 +57,7 @@ func (b *Buffer) Get(key string) *Entry {
 	return e
 }
 
-func (b *Buffer) Set(entry *Entry, ttw int64) {
+func (b *Buffer) Put(entry *Entry, ttw int64) {
 	b.mtx.Lock()
 	defer b.mtx.Unlock()
 
@@ -69,33 +69,25 @@ func (b *Buffer) Set(entry *Entry, ttw int64) {
 	}
 
 	b.q.Push(entry.Key, priority)
-	b.saveCond.Signal()
+	b.cond.Signal()
 }
 
-func (b *Buffer) OnSave(key string, ok bool) {
+func (b *Buffer) OnSave(entry *Entry, ok bool) {
+	b.mtx.Lock()
+	defer b.mtx.Unlock()
+
 	if ok {
-		b.onSaveOK(key)
+		if _, needSave := b.q.Priority(entry.Key); !needSave {
+			delete(b.entries, entry.Key)
+		}
 	} else {
-		b.onSaveFail(key)
+		if _, ok := b.entries[entry.Key]; !ok {
+			b.entries[entry.Key] = entry
+		}
+		priority := time.Now().Unix() + 1
+		b.q.Push(entry.Key, priority)
+		b.cond.Signal()
 	}
-}
-
-func (b *Buffer) onSaveOK(key string) {
-	b.mtx.Lock()
-	defer b.mtx.Unlock()
-
-	if _, needSave := b.q.Priority(key); !needSave {
-		delete(b.entries, key)
-	}
-}
-
-func (b *Buffer) onSaveFail(key string) {
-	b.mtx.Lock()
-	defer b.mtx.Unlock()
-
-	priority := time.Now().Unix()
-	b.q.Push(key, priority)
-	b.saveCond.Signal()
 }
 
 func (b *Buffer) Len() int {

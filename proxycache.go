@@ -1,43 +1,56 @@
 package proxycache
 
-import "github.com/huangml/proxycache/volume"
+import (
+	"github.com/huangml/proxycache/cache"
+	"github.com/huangml/proxycache/proxy"
+)
 
 type ProxyCache struct {
-	volume *volume.Volume
-	proxy  Proxy
+	cache  *cache.Cache
+	buffer *cache.Buffer
+	saver  *proxy.Saver
+	loader *proxy.Loader
 }
 
-func New(proxy Proxy, maxEntry int) *ProxyCache {
-	p := &ProxyCache{
-		volume: volume.NewVolume(maxEntry),
-		proxy:  proxy,
+func New(p proxy.Proxy, maxEntry int) *ProxyCache {
+	c := cache.NewCache(maxEntry)
+	b := cache.NewBuffer()
+	s := proxy.NewSaver(p, 1, b)
+	l := proxy.NewLoader(p, 1)
+
+	return &ProxyCache{
+		cache:  c,
+		buffer: b,
+		saver:  s,
+		loader: l,
 	}
-
-	go func() {
-		for {
-			entry := <-p.volume.SaveChan()
-			ok := p.proxy.Save(entry.Key, entry.Value)
-			p.volume.OnSave(entry.Key, ok)
-		}
-	}()
-
-	return p
 }
 
 func (p *ProxyCache) Get(key string) []byte {
-	if value := p.volume.Get(key); value != nil {
-		return value
+	entry := p.cache.Get(key)
+	if entry != nil {
+		return entry.Value
 	}
 
-	value, ok := p.proxy.Load(key)
-	if ok {
-		p.volume.OnLoad(key, value)
-		return value
+	entry = p.buffer.Get(key)
+	if entry != nil {
+		return entry.Value
 	}
 
-	return nil
+	val, _ := p.loader.Load(key)
+	return val
 }
 
-func (p *ProxyCache) Set(key string, value []byte, ttw int64) {
-	p.volume.Set(key, value, ttw)
+func (p *ProxyCache) Put(key string, value []byte, ttw int64) {
+	entry := &cache.Entry{key, value}
+	p.cache.Put(entry)
+	p.buffer.Put(entry, ttw)
+}
+
+func (p *ProxyCache) SetLoadMaxProc(maxProc int) {
+	p.loader.SetMaxProc(maxProc)
+}
+
+func (p *ProxyCache) SetSaveMaxProc(maxProc int) {
+	p.saver.SetMaxProc(maxProc)
 }
