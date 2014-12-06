@@ -37,7 +37,10 @@ func (p *ProxyCache) Get(key string) []byte {
 		return entry.Value
 	}
 
-	val, _ := p.loader.Load(key)
+	val, ok := p.loader.Load(key)
+	if ok {
+		p.cache.Put(&cache.Entry{key, val})
+	}
 	return val
 }
 

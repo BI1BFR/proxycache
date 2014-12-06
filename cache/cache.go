@@ -1,3 +1,4 @@
+// package cache defines containers for in-memory storage.
 package cache
 
 import (
@@ -6,6 +7,8 @@ import (
 	"github.com/huangml/proxycache/lru"
 )
 
+// Cache is an LRU cache.
+// It auto removes least-recently-used entry when cache is full.
 type Cache struct {
 	maxEntry int
 	entries  map[string]*Entry
@@ -13,6 +16,8 @@ type Cache struct {
 	mtx      sync.Mutex
 }
 
+// NewCache creates a new Cache.
+// If maxEntry is 0, the cache has no limit size.
 func NewCache(maxEntry int) *Cache {
 	return &Cache{
 		maxEntry: maxEntry,
@@ -21,6 +26,8 @@ func NewCache(maxEntry int) *Cache {
 	}
 }
 
+// SetMaxEntry setup a new maxEntry.
+// Extra entries will be removed immediately.
 func (c *Cache) SetMaxEntry(maxEntry int) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
@@ -29,6 +36,8 @@ func (c *Cache) SetMaxEntry(maxEntry int) {
 	c.checkMaxEntryWithLock()
 }
 
+// Get looks up entry by a key.
+// It marks the key as recently-used.
 func (c *Cache) Get(key string) *Entry {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
@@ -41,6 +50,8 @@ func (c *Cache) Get(key string) *Entry {
 	}
 }
 
+// Put puts an entry to the cache.
+// It marks the key as rencently-used.
 func (c *Cache) Put(entry *Entry) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
@@ -50,10 +61,15 @@ func (c *Cache) Put(entry *Entry) {
 	c.checkMaxEntryWithLock()
 }
 
-func (c *Cache) OnLoad(key string, value []byte) {
-	c.Put(&Entry{key, value})
+// MaxEntry returns maxEntry of the cache.
+func (c *Cache) MaxEntry() int {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	return c.maxEntry
 }
 
+// Len returns cache size.
 func (c *Cache) Len() int {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
