@@ -2,6 +2,7 @@ package proxy
 
 import "sync"
 
+// MaxOfMaxProc is the maximum value of maxProc.
 const MaxOfMaxProc = 64
 
 type proc struct {
@@ -20,6 +21,7 @@ func newProc(maxProc int) *proc {
 	return p
 }
 
+// SetMaxProc sets max number of goroutines.
 func (p *proc) SetMaxProc(maxProc int) {
 	if maxProc > MaxOfMaxProc {
 		maxProc = MaxOfMaxProc

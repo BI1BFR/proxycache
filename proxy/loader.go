@@ -2,10 +2,12 @@ package proxy
 
 import "sync"
 
+// ProxyLoader is the interface wraps the Load method.
 type ProxyLoader interface {
 	Load(key string) (value []byte, ok bool)
 }
 
+// Loader provides method to load data by Proxy concurrently.
 type Loader struct {
 	p ProxyLoader
 	*proc
@@ -14,6 +16,9 @@ type Loader struct {
 	inFlight map[string]*loadResult
 }
 
+// NewLoader creates a Loader.
+// Parameter maxProc specifies the maximum number of goroutines call Load(),
+// the excess will be blocked.
 func NewLoader(p ProxyLoader, maxProc int) *Loader {
 	l := &Loader{
 		p:        p,
@@ -37,6 +42,8 @@ type loadResult struct {
 	ok    bool
 }
 
+// Load loads data by the provided key concurrently.
+// Duplicate keys will be loaded only once.
 func (l *Loader) Load(key string) ([]byte, bool) {
 	l.mtx.Lock()
 	if f, ok := l.inFlight[key]; ok {
@@ -60,4 +67,12 @@ func (l *Loader) Load(key string) ([]byte, bool) {
 	l.mtx.Unlock()
 
 	return f.value, f.ok
+}
+
+// ProcNum returns number of loading goroutines.
+func (l *Loader) ProcNum() int {
+	l.proc.mtx.Lock()
+	defer l.proc.mtx.Unlock()
+
+	return l.maxProc - len(l.start)
 }

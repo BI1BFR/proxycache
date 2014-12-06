@@ -3,7 +3,7 @@ package lru
 
 import "container/list"
 
-// LRU is an LRU queue. Concurrently access is not supported.
+// LRU is an LRU queue.
 type LRU struct {
 	l     *list.List
 	index map[interface{}]*list.Element
@@ -17,7 +17,7 @@ func New() *LRU {
 	}
 }
 
-// Touch marks a key as recently used. The key will be created if not exists.
+// Touch marks a key as recently-used. The key will be created if not exists.
 func (lru *LRU) Touch(key interface{}) {
 	e, ok := lru.index[key]
 	if ok {
@@ -32,7 +32,7 @@ func (lru *LRU) Len() int {
 	return lru.l.Len()
 }
 
-// Pop pops out the least recently used key. It returns nil if no key exists.
+// Pop pops out the least-recently-used key. It returns nil if no key exists.
 func (lru *LRU) Pop() interface{} {
 	if e := lru.l.Front(); e != nil {
 		lru.Remove(e.Value)

@@ -1,3 +1,4 @@
+//package proxycache is a key-value caching library.
 package proxycache
 
 import (
@@ -5,6 +6,7 @@ import (
 	"github.com/huangml/proxycache/proxy"
 )
 
+// ProxyCache is an in-memory key-value cache, and a database access proxy.
 type ProxyCache struct {
 	cache  *cache.Cache
 	buffer *cache.Buffer
@@ -12,11 +14,12 @@ type ProxyCache struct {
 	loader *proxy.Loader
 }
 
-func New(p proxy.Proxy, maxEntry int) *ProxyCache {
+// New creates a ProxyCache.
+func New(p proxy.Proxy, maxEntry, saverProc, loaderProc int) *ProxyCache {
 	c := cache.NewCache(maxEntry)
 	b := cache.NewBuffer()
-	s := proxy.NewSaver(p, 1, b)
-	l := proxy.NewLoader(p, 1)
+	s := proxy.NewSaver(p, saverProc, b)
+	l := proxy.NewLoader(p, loaderProc)
 
 	return &ProxyCache{
 		cache:  c,
@@ -26,6 +29,9 @@ func New(p proxy.Proxy, maxEntry int) *ProxyCache {
 	}
 }
 
+// Get retrieves data from ProxyCache.
+// If provided key is not found in cache, data will be loaded by calling Proxy's
+// Load method.
 func (p *ProxyCache) Get(key string) []byte {
 	entry := p.cache.Get(key)
 	if entry != nil {
@@ -44,16 +50,25 @@ func (p *ProxyCache) Get(key string) []byte {
 	return val
 }
 
+// Put puts data into ProxyCache.
+// Data will be saved asynchronously by calling Proxy's Save method.
 func (p *ProxyCache) Put(key string, value []byte, ttw int64) {
 	entry := &cache.Entry{key, value}
 	p.cache.Put(entry)
 	p.buffer.Put(entry, ttw)
 }
 
+// SetMaxEntry sets Cache's maxEntry.
+func (p *ProxyCache) SetMaxEntry(maxEntry int) {
+	p.cache.SetMaxEntry(maxEntry)
+}
+
+// SetLoadMaxProc sets Loader's maxProc.
 func (p *ProxyCache) SetLoadMaxProc(maxProc int) {
 	p.loader.SetMaxProc(maxProc)
 }
 
-func (p *ProxyCache) SetSaveMaxProc(maxProc int) {
-	p.saver.SetMaxProc(maxProc)
+// SetSaveProc sets the number of Saver's workers.
+func (p *ProxyCache) SetSaveProc(proc int) {
+	p.saver.SetMaxProc(proc)
 }
