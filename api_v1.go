@@ -16,9 +16,9 @@ type handlerV1 struct {
 }
 
 func (h *handlerV1) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(r.URL.Path, "v1/keys/") {
+	if strings.HasPrefix(r.URL.Path, "/v1/keys/") {
 		h.keys(w, r)
-	} else if strings.HasPrefix(r.URL.Path, "v1/status") {
+	} else if strings.HasPrefix(r.URL.Path, "/v1/status") {
 		h.status(w)
 	} else {
 		http.NotFound(w, r)
@@ -26,7 +26,7 @@ func (h *handlerV1) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlerV1) keys(w http.ResponseWriter, r *http.Request) {
-	key := strings.TrimPrefix(r.URL.Path, "v1/keys/")
+	key := strings.TrimPrefix(r.URL.Path, "/v1/keys/")
 	if len(key) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
