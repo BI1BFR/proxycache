@@ -103,10 +103,17 @@ func (b *Buffer) OnSave(entry *Entry, ok bool) {
 	}
 }
 
-// Len returns number of entries.
-func (b *Buffer) Len() int {
+// BufferStatus is used for runtime performance profiling.
+type BufferStatus struct {
+	BufferSize int `json:"bufferSize"`
+}
+
+// Status returns Buffer's runtime performance status.
+func (b *Buffer) Status() BufferStatus {
 	b.mtx.Lock()
 	defer b.mtx.Unlock()
 
-	return len(b.entries)
+	return BufferStatus{
+		BufferSize: len(b.entries),
+	}
 }

@@ -69,14 +69,6 @@ func (c *Cache) MaxEntry() int {
 	return c.maxEntry
 }
 
-// Len returns cache size.
-func (c *Cache) Len() int {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	return len(c.entries)
-}
-
 func (c *Cache) checkMaxEntryWithLock() {
 	for c.maxEntry > 0 && len(c.entries) > c.maxEntry {
 		if k, ok := c.use.Pop().(string); ok {
@@ -84,5 +76,22 @@ func (c *Cache) checkMaxEntryWithLock() {
 		} else {
 			break
 		}
+	}
+}
+
+// CacheStatus is used for runtime performance profiling.
+type CacheStatus struct {
+	MaxEntry  int `json:"maxEntry"`
+	CacheSize int `json:"cacheSize"`
+}
+
+// Status returns Cache's runtime performance status.
+func (c *Cache) Status() CacheStatus {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	return CacheStatus{
+		MaxEntry:  c.maxEntry,
+		CacheSize: len(c.entries),
 	}
 }

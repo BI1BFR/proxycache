@@ -81,3 +81,24 @@ func NewSaver(p ProxySaver, maxProc int, buffer Buffer) *Saver {
 
 	return s
 }
+
+// SaverStatus is used for runtime performance profiling.
+type SaverStatus struct {
+	MaxSaverProc int `json:"maxSaverProc"`
+	SaverProc    int `json:"saverProc"`
+	InflightSave int `json:"inflightSave"`
+}
+
+// Status returns Saver's runtime performance status.
+func (s *Saver) Status() SaverStatus {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	s.proc.mtx.Lock()
+	defer s.proc.mtx.Unlock()
+
+	return SaverStatus{
+		MaxSaverProc: s.proc.maxProc,
+		SaverProc:    s.proc.maxProc - len(s.proc.start),
+		InflightSave: len(s.inFlight),
+	}
+}

@@ -69,10 +69,23 @@ func (l *Loader) Load(key string) ([]byte, bool) {
 	return f.value, f.ok
 }
 
-// ProcNum returns number of loading goroutines.
-func (l *Loader) ProcNum() int {
+// LoaderStatus is used for runtime performance profiling.
+type LoaderStatus struct {
+	MaxLoaderProc int `json:"maxLoaderProc"`
+	LoaderProc    int `json:"loaderProc"`
+	InflightLoad  int `json:"inflightLoad"`
+}
+
+// Status returns Loader's runtime performance status.
+func (l *Loader) Status() LoaderStatus {
+	l.mtx.Lock()
+	defer l.mtx.Unlock()
 	l.proc.mtx.Lock()
 	defer l.proc.mtx.Unlock()
 
-	return l.maxProc - len(l.start)
+	return LoaderStatus{
+		MaxLoaderProc: l.proc.maxProc,
+		LoaderProc:    l.proc.maxProc - len(l.proc.start),
+		InflightLoad:  len(l.inFlight),
+	}
 }

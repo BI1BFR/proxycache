@@ -2,6 +2,8 @@
 package proxycache
 
 import (
+	"encoding/json"
+
 	"github.com/huangml/proxycache/cache"
 	"github.com/huangml/proxycache/proxy"
 )
@@ -71,4 +73,25 @@ func (p *ProxyCache) SetLoadMaxProc(maxProc int) {
 // SetSaveProc sets the number of Saver's workers.
 func (p *ProxyCache) SetSaveProc(proc int) {
 	p.saver.SetMaxProc(proc)
+}
+
+// Status is used for runtime performance profiling.
+type Status struct {
+	cache.CacheStatus
+	cache.BufferStatus
+	proxy.LoaderStatus
+	proxy.SaverStatus
+}
+
+// Status returns ProxyCache's runtime performance status.
+func (p *ProxyCache) Status() []byte {
+	s := Status{
+		CacheStatus:  p.cache.Status(),
+		BufferStatus: p.buffer.Status(),
+		LoaderStatus: p.loader.Status(),
+		SaverStatus:  p.saver.Status(),
+	}
+
+	b, _ := json.Marshal(s)
+	return b
 }
