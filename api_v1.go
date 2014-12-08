@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// HTTPHandlerV1 create HTTP handler (version 1).
+// To serve on a sub URI, don't forget to use http.StripPrefix().
+// Check example/server for more details.
 func (p *ProxyCache) HTTPHandlerV1() http.Handler {
 	return &handlerV1{p}
 }
