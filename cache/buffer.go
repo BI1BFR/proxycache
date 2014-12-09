@@ -28,18 +28,19 @@ func NewBuffer() *Buffer {
 	b.hasOut = sync.NewCond(&b.mtx)
 
 	go func() {
+		pump := func() *Entry {
+			b.mtx.Lock()
+			defer b.mtx.Unlock()
+
+			for b.q.Len() == 0 {
+				b.hasOut.Wait()
+			}
+
+			return b.entries[b.q.Pop().(string)]
+		}
+
 		for {
-			if entry := func() *Entry {
-				b.mtx.Lock()
-				defer b.mtx.Unlock()
-
-				for b.q.Len() == 0 {
-					b.hasOut.Wait()
-				}
-
-				return b.entries[b.q.Pop().(string)]
-
-			}(); entry != nil {
+			if entry := pump(); entry != nil {
 				b.out <- entry
 			}
 		}

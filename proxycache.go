@@ -3,6 +3,7 @@ package proxycache
 
 import (
 	"encoding/json"
+	"net/http"
 
 	"github.com/huangml/proxycache/cache"
 	"github.com/huangml/proxycache/proxy"
@@ -73,6 +74,13 @@ func (p *ProxyCache) SetLoadMaxProc(maxProc int) {
 // SetSaveProc sets the number of Saver's workers.
 func (p *ProxyCache) SetSaveProc(proc int) {
 	p.saver.SetMaxProc(proc)
+}
+
+// HTTPHandlerV1 create HTTP handler (version 1).
+// To serve on a sub URI, don't forget to use http.StripPrefix().
+// Check example/server for more details.
+func (p *ProxyCache) HTTPHandlerV1() http.Handler {
+	return &handlerV1{p}
 }
 
 // Status is used for runtime performance profiling.
