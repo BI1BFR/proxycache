@@ -39,7 +39,7 @@ func (h *handlerV1) keys(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		h.get(w, r.URL.Path)
+		h.get(w, key)
 	case "PUT":
 		value, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -47,7 +47,7 @@ func (h *handlerV1) keys(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ttw, _ := strconv.Atoi(r.URL.Query().Get("ttw"))
-		h.put(w, r.URL.Path, value, int64(ttw))
+		h.put(w, key, value, int64(ttw))
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 	}
