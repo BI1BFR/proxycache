@@ -42,6 +42,7 @@ func (p *PriorityQueue) Push(value interface{}, priority int64) {
 // Pop pops out value with minimal priority. It returns nil if no value exists.
 func (p *PriorityQueue) Pop() interface{} {
 	if e := heap.Pop(&p.heap).(*pqEntry); e != nil {
+		delete(p.index, e.value)
 		return e.value
 	} else {
 		return nil
