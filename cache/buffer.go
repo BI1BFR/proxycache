@@ -11,29 +11,29 @@ import (
 type Buffer struct {
 	entries map[string]*Entry
 	q       *pq.PriorityQueue
-	mtx     sync.Mutex
 
-	out    chan *Entry
-	hasOut *sync.Cond
+	out  chan *Entry
+	cond *sync.Cond
 }
 
 // NewBuffer creates a Buffer.
 // It pumps entries to a channel order by their priorities.
 func NewBuffer() *Buffer {
+	var l sync.Mutex
 	b := &Buffer{
 		entries: make(map[string]*Entry),
 		q:       pq.New(),
 		out:     make(chan *Entry),
+		cond:    sync.NewCond(&l),
 	}
-	b.hasOut = sync.NewCond(&b.mtx)
 
 	go func() {
 		pump := func() *Entry {
-			b.mtx.Lock()
-			defer b.mtx.Unlock()
+			b.cond.L.Lock()
+			defer b.cond.L.Unlock()
 
 			for b.q.Len() == 0 {
-				b.hasOut.Wait()
+				b.cond.Wait()
 			}
 
 			return b.entries[b.q.Pop().(string)]
@@ -57,8 +57,8 @@ func (b *Buffer) Entries() <-chan *Entry {
 
 // Get looks up an entry by the provided key.
 func (b *Buffer) Get(key string) *Entry {
-	b.mtx.Lock()
-	defer b.mtx.Unlock()
+	b.cond.L.Lock()
+	defer b.cond.L.Unlock()
 
 	e, _ := b.entries[key]
 	return e
@@ -68,8 +68,8 @@ func (b *Buffer) Get(key string) *Entry {
 // The entry will be pumped into out channel, orderd by priority.
 // Entry's priority is `current unix epoch time + ttw`.
 func (b *Buffer) Put(entry *Entry, ttw int64) {
-	b.mtx.Lock()
-	defer b.mtx.Unlock()
+	b.cond.L.Lock()
+	defer b.cond.L.Unlock()
 
 	b.entries[entry.Key] = entry
 	priority := time.Now().Unix() + ttw
@@ -80,15 +80,15 @@ func (b *Buffer) Put(entry *Entry, ttw int64) {
 	}
 
 	b.q.Push(entry.Key, priority)
-	b.hasOut.Signal()
+	b.cond.Signal()
 }
 
 // OnSave handles entry saving result.
 // If succesed, the entry will removed from Buffer.
 // If failed, the entry will be pushed back to Buffer and saved later again.
 func (b *Buffer) OnSave(entry *Entry, ok bool) {
-	b.mtx.Lock()
-	defer b.mtx.Unlock()
+	b.cond.L.Lock()
+	defer b.cond.L.Unlock()
 
 	if ok {
 		if _, needSave := b.q.Priority(entry.Key); !needSave {
@@ -100,7 +100,7 @@ func (b *Buffer) OnSave(entry *Entry, ok bool) {
 		}
 		priority := time.Now().Unix() + 1
 		b.q.Push(entry.Key, priority)
-		b.hasOut.Signal()
+		b.cond.Signal()
 	}
 }
 
@@ -111,8 +111,8 @@ type BufferStatus struct {
 
 // Status returns Buffer's runtime performance status.
 func (b *Buffer) Status() BufferStatus {
-	b.mtx.Lock()
-	defer b.mtx.Unlock()
+	b.cond.L.Lock()
+	defer b.cond.L.Unlock()
 
 	return BufferStatus{
 		BufferSize: len(b.entries),
