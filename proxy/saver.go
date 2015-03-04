@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"sync"
+	"time"
 
 	"github.com/huangml/proxycache/cache"
 )
@@ -73,6 +74,10 @@ func NewSaver(p ProxySaver, maxProc int, buffer Buffer) *Saver {
 						s.mtx.Lock()
 						delete(s.inFlight, entry.Key)
 						s.mtx.Unlock()
+
+						if !ok {
+							time.Sleep(time.Second)
+						}
 					}
 				}
 			}()
